@@ -33,7 +33,7 @@ jobs:
 
       # Step 4: Build and test the project (single step)
       - name: Build and test with Gradle
-        uses: gradle/gradle-build-action@v3.5.0
+        uses: gradle/actions/setup-gradle@v3
         with:
           arguments: build
 
