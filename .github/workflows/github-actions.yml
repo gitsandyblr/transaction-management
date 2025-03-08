@@ -3,11 +3,11 @@ name: Transaction Management Build
 on:
   push:
     branches:
-      - main
+      - master
       - 'feature/**'
   pull_request:
     branches:
-      - main
+      - master
       - 'feature/**'
 
 jobs:
