@@ -31,13 +31,15 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # Step 4: Build and test the project (single step)
+      # Step 4: Setup Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        
+      # Step 5: Build and test with Gradle
       - name: Build and test with Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          arguments: build
+        run: ./gradlew build
 
-      # Step 5: Upload build artifacts
+      # Step 6: Upload build artifacts
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
