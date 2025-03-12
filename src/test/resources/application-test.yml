@@ -1,0 +1,67 @@
+spring:
+  r2dbc:
+    url: r2dbc:h2:mem:///transaction-data-repo;DB_CLOSE_DELAY=-1;MODE=MYSQL
+    username: sa
+    password: 
+    pool:
+      initial-size: 5
+      max-size: 10
+  flyway:
+    url: jdbc:h2:mem:transaction-data-repo;DB_CLOSE_DELAY=-1;MODE=MYSQL
+    user: sa
+    password:
+    locations: classpath:db/migration
+    enabled: true
+    baseline-on-migrate: true
+    validate-on-migrate: true
+  redis:
+    host: localhost
+    port: 6379
+    # For embedded Redis testing
+    embedded:
+      enabled: true
+      ports:
+        - 6379
+  cache:
+    type: redis
+    redis:
+      time-to-live: 60000  # 1 minute cache TTL for tests
+      cache-null-values: false
+    cache-names:
+      - transactionSummaryCache
+      - customerCache
+      - productCache
+      - transactionCache
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: http://localhost:9000/oauth2/jwks
+
+logging:
+  level:
+    root: INFO
+    org.springframework: INFO
+    com.tabcorp.transaction.management: DEBUG
+    io.r2dbc: INFO
+
+# Test-specific settings
+test:
+  timeout: 5000  # Timeout for async operations in tests
+  transaction:
+    batchSize: 10
+
+# Disable security for tests
+security:
+  basic:
+    enabled: false
+
+# Test environment configuration
+          
+# Server configuration for tests
+server:
+  ssl:
+    enabled: false
+  port: 8080
+
+

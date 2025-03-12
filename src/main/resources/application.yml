@@ -1,0 +1,199 @@
+resilience4j:
+  circuitbreaker:
+    instances:
+      processJsonTransactions:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 100
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 5
+        minimumNumberOfCalls: 10
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+      processBsonTransactions:
+        slidingWindowType: COUNT_BASED
+        slidingWindowSize: 100
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        permittedNumberOfCallsInHalfOpenState: 5
+        minimumNumberOfCalls: 10
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+  
+  bulkhead:
+    instances:
+      processJsonTransactions:
+        maxConcurrentCalls: 50
+        maxWaitDuration: 500ms
+      processBsonTransactions:
+        maxConcurrentCalls: 50
+        maxWaitDuration: 500ms
+
+  timelimiter:
+    instances:
+      processJsonTransactions:
+        timeoutDuration: 5s
+        cancelRunningFuture: true
+      processBsonTransactions:
+        timeoutDuration: 5s
+        cancelRunningFuture: true
+
+# Transaction processing configuration
+transaction:
+  processing:
+    timeout: 5  # seconds
+    batch-size: 100
+    parallel-threads: 3
+    
+# Kafka configuration
+kafka:
+  bootstrap-servers: localhost:9092
+  topic:
+    json-transactions: json-transactions
+    bson-transactions: bson-transactions
+  group:
+    json-transactions: json-transactions-group
+    bson-transactions: bson-transactions-group
+  consumer:
+    batch-size: 100
+    concurrency: 3
+
+# Logging configuration
+logging:
+  level:
+    root: INFO
+    com.tabcorp.transaction.management: DEBUG
+    org.springframework.data.r2dbc: DEBUG
+    org.springframework.r2dbc: DEBUG
+    org.springframework.data.redis: DEBUG
+    io.r2dbc: DEBUG
+    io.r2dbc.pool: DEBUG
+
+# Server configuration
+server:
+  # Primary port for HTTPS traffic - application runs securely on this port
+  port: 8443
+  ssl:
+    # SSL/TLS configuration for secure HTTPS connections
+    key-store: classpath:keystore.p12
+    key-store-password: password123
+    key-store-type: PKCS12
+    key-alias: tomcat
+    enabled: true
+  http2:
+    enabled: true
+  http:
+    # Secondary port (8080) is ONLY for redirecting HTTP traffic to HTTPS
+    # All traffic coming to this port will be automatically redirected to HTTPS (8443)
+    port: 8080
+
+  tomcat:
+    remoteip:
+      remote-ip-header: X-Forwarded-For
+      protocol-header: X-Forwarded-Proto
+    redirect-port: 8443  # Port to redirect to when HTTPS is required
+    # Tomcat connector configuration
+    use-relative-redirects: true
+    # Configure Tomcat to redirect HTTP to HTTPS
+    connectors:
+      - port: 8080
+        protocol: HTTP/1.1
+        secure: false
+        scheme: http
+        redirectPort: 8443  # Redirect to secure port
+
+# Spring configuration
+spring:
+  application:
+    name: transaction-management
+  # R2DBC configuration for reactive database access
+
+  r2dbc:
+    url: r2dbc:h2:mem:///transaction-data-repo;DB_CLOSE_DELAY=-1;MODE=MYSQL
+    username: sa
+    password: 
+    pool:
+      initial-size: 5
+      max-size: 20
+      max-idle-time: 30m
+      validation-query: SELECT 1
+
+  # Flyway configuration
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    url: jdbc:h2:mem:transaction-data-repo;DB_CLOSE_DELAY=-1;MODE=MYSQL  # Note the jdbc: prefix
+    user: sa
+    password:
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+  # Redis configuration for caching
+  # If Redis is not installed, you can install it with:
+  # macOS: brew install redis && brew services start redis
+  # Ubuntu/Debian: sudo apt update && sudo apt install redis-server && sudo systemctl start redis-server
+  # Windows: Download from https://github.com/microsoftarchive/redis/releases and run the installer
+  # Verify Redis is running with: redis-cli ping (should return PONG)
+  redis:
+    host: localhost
+    port: 6379
+    timeout: 2000
+    connect-timeout: 2000
+    database: 0
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1ms
+
+  # H2 Console - still useful for debugging
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+# Management and actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+    metrics:
+      enabled: true
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: transaction-management
+    distribution:
+      percentiles-histogram:
+        transaction.processing.time: true
+        transaction.validation.time: true
+        transaction.database.operation.time: true
+      sla:
+        transaction.processing.time: 1000,5000  # 1s,5s
+
+# Cache configuration
+  cache:
+    type: redis
+    redis:
+      time-to-live: 300000  # Cache entries live for 5 minutes (in milliseconds)
+      cache-null-values: false
+      use-key-prefix: true
+      key-prefix: transaction-cache
+    cache-names:
+      - customerCache
+      - productCache
+      - transactionSummaryCache
+      - transactionVolumeCache
+
+    max-create-connection-time: 2s
+    max-acquire-time: 3s
+    max-life-time: 30m
+
+  # Turn off Spring Boot's default schema initialization
+  sql:
+    init:
+      mode: never
