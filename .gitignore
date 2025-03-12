@@ -39,3 +39,16 @@ out/
 ### mac ###
 .DS_Store
 **/.DS_Store
+
+### Logs ###
+*.log
+logs/
+
+### Maven ###
+target/
+
+### Temporary Files ###
+*.tmp
+*.bak
+*~
+
